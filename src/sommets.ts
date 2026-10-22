@@ -4,7 +4,7 @@ export interface Sommet {
     massif: string;
     latitude: number;
     longitude: number;
-    altitude: number; // en mètres
+    altitude: number;
 }
 
 export const SOMMETS: Sommet[] = [
