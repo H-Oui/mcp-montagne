@@ -77,6 +77,15 @@ Sous macOS ou Linux : `"/chemin/vers/mcp-montagne/dist/index.js"`. Le serveur re
 
 Quittez ensuite **complètement** Claude Desktop (y compris son icône dans la zone de notification), relancez-le, puis vérifiez dans **Paramètres > Développeur** que `montagne` est « En cours ».
 
+## Lancer avec Docker
+
+```bash
+docker build -t mcp-montagne .
+docker run -i --rm --env-file .env mcp-montagne
+```
+
+La clé d'API est transmise au démarrage via `--env-file` et n'est jamais copiée dans l'image (le fichier `.env` est exclu par `.dockerignore`).
+
 ## Développement
 
 ```bash
