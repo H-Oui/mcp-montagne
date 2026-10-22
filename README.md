@@ -1,5 +1,7 @@
 # mcp-montagne
 
+![CI](https://github.com/H-Oui/mcp-montagne/actions/workflows/ci.yml/badge.svg)
+
 Un serveur [MCP](https://modelcontextprotocol.io) (Model Context Protocol) en Node.js et TypeScript qui donne à Claude des outils pour **préparer une sortie en montagne dans les Alpes françaises** : météo à l'altitude d'un sommet et bulletin d'estimation du risque d'avalanche (BRA) de Météo-France.
 
 Plutôt que de jongler entre plusieurs sites pour décider si une sortie est raisonnable, on pose la question à Claude, qui interroge les sources officielles et résume.
