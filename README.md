@@ -16,10 +16,11 @@ Pour une sortie en montagne, les informations utiles sont éparpillées : bullet
 
 ## Fonctionnalités
 
-| Outil | Rôle |
-|---|---|
-| `meteo_sommet` | Météo à l'altitude d'un sommet : conditions actuelles, ou prévision de la journée pour aujourd'hui, demain, après-demain et dans trois jours (température, vent, rafales, nuages, isotherme 0 °C, neige). Source : Open-Meteo. |
+| Outil | Rôle                                                                                                                                                                                                                                 |
+|---|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `meteo_sommet` | Météo à l'altitude d'un sommet : conditions actuelles, ou prévision de la journée pour aujourd'hui, demain, après-demain et dans trois jours (température, vent, rafales, nuages, isotherme 0 °C, neige). Source : Open-Meteo.       |
 | `bulletin_avalanche` | Bulletin d'estimation du risque d'avalanche d'un massif : risque maximal et par altitude, orientations de pentes dangereuses, tendance à J+2, stabilité du manteau, enneigement, neige fraîche, aperçu météo. Source : Météo-France. |
+| `resume_sortie` | En un seul appel, la prévision météo d’un sommet et le bulletin d’avalanche de son massif.                                                                                                                                           |
 
 Exemples de questions à poser à Claude :
 

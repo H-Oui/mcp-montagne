@@ -8,6 +8,7 @@ import { MASSIFS, trouverMassif } from "./massifs.js";
 import { getBra } from "./bra.js";
 import { parseBra } from "./bra-parser.js";
 import { formaterBulletin } from "./bra-format.js";
+import { resumeSortie } from "./synthese.js";
 
 // Charge le .env situé à la racine du projet
 try {
@@ -17,6 +18,47 @@ try {
 }
 
 const server = new McpServer({ name: "mcp-montagne", version: "1.0.0" });
+
+server.registerTool(
+    "resume_sortie",
+    {
+        description:
+            "Prépare une sortie en montagne : combine en un seul appel la prévision météo à l'altitude d'un sommet et le bulletin d'avalanche (BRA) de son massif. À utiliser en priorité quand l'utilisateur demande s'il peut aller quelque part ou ce qu'il doit regarder avant une sortie.",
+        inputSchema: z.object({
+            sommet: z.string().describe("Nom du sommet, par exemple Chamechaude"),
+            jour: z
+                .number()
+                .int()
+                .min(0)
+                .max(3)
+                .optional()
+                .describe("Jour de la sortie : 0 aujourd'hui, 1 demain (par défaut), 2 après-demain, 3 dans trois jours"),
+        }),
+    },
+    async ({ sommet, jour }) => {
+        const trouve = trouverSommet(sommet);
+        if (!trouve) {
+            const connus = SOMMETS.map((s) => s.nom).join(", ");
+            return {
+                content: [
+                    { type: "text", text: `Sommet inconnu : ${sommet}. Sommets disponibles : ${connus}.` },
+                ],
+                isError: true,
+            };
+        }
+
+        try {
+            const texte = await resumeSortie(trouve, jour ?? 1);
+            return { content: [{ type: "text", text: texte }] };
+        } catch (erreur) {
+            const message = erreur instanceof Error ? erreur.message : "erreur inconnue";
+            return {
+                content: [{ type: "text", text: `Impossible de préparer la synthèse : ${message}` }],
+                isError: true,
+            };
+        }
+    }
+);
 
 server.registerTool(
     "meteo_sommet",
@@ -93,8 +135,7 @@ server.registerTool(
                     content: [
                         {
                             type: "text",
-                            text: `Pas de bulletin d'avalanche pour ${trouve.nom} actuellement.\nMessage de Météo-France : ${resultat.message}`,
-                        },
+                            text: `Pas de bulletin d'avalanche pour ${trouve.nom} actuellement.\nMessage de Météo-France : ${resultat.message}\nAttention : l'absence de bulletin ne signifie pas l'absence de risque. Ne pas en déduire que la sortie est sans danger, et évaluer l'enneigement réel sur place.`,                        },
                     ],
                 };
             }
