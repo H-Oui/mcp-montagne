@@ -135,7 +135,7 @@ server.registerTool(
                     content: [
                         {
                             type: "text",
-                            text: `Pas de bulletin d'avalanche pour ${trouve.nom} actuellement.\nMessage de Météo-France : ${resultat.message}\nAttention : l'absence de bulletin ne signifie pas l'absence de risque. Ne pas en déduire que la sortie est sans danger, et évaluer l'enneigement réel sur place.`,                        },
+                            text: `Pas de bulletin d'avalanche pour ${trouve.nom} actuellement.\nMessage de Météo-France : ${resultat.message}\n\nAttention : l'absence de bulletin ne signifie pas l'absence de risque. En dehors de la période de publication, des avalanches restent possibles en montagne.`,                        },
                     ],
                 };
             }
