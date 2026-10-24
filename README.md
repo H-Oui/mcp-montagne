@@ -1,6 +1,7 @@
 # mcp-montagne
 
-![CI](https://github.com/H-Oui/mcp-montagne/actions/workflows/ci.yml/badge.svg)
+[![CI](https://github.com/H-Oui/mcp-montagne/actions/workflows/ci.yml/badge.svg)](https://github.com/H-Oui/mcp-montagne/actions/workflows/ci.yml)
+[![CD](https://github.com/H-Oui/mcp-montagne/actions/workflows/cd.yml/badge.svg)](https://github.com/H-Oui/mcp-montagne/actions/workflows/cd.yml)
 
 Un serveur [MCP](https://modelcontextprotocol.io) (Model Context Protocol) en Node.js et TypeScript qui donne à Claude des outils pour **préparer une sortie en montagne dans les Alpes françaises** : météo à l'altitude d'un sommet et bulletin d'estimation du risque d'avalanche (BRA) de Météo-France.
 
@@ -16,11 +17,11 @@ Pour une sortie en montagne, les informations utiles sont éparpillées : bullet
 
 ## Fonctionnalités
 
-| Outil | Rôle                                                                                                                                                                                                                                 |
-|---|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `meteo_sommet` | Météo à l'altitude d'un sommet : conditions actuelles, ou prévision de la journée pour aujourd'hui, demain, après-demain et dans trois jours (température, vent, rafales, nuages, isotherme 0 °C, neige). Source : Open-Meteo.       |
+| Outil | Rôle |
+|---|---|
+| `resume_sortie` | Synthèse d'une sortie : combine en un seul appel la prévision à l'altitude d'un sommet et le bulletin d'avalanche de son massif. Gère le hors-saison, l'échec d'une des deux sources et la différence entre la date de la sortie et la validité du bulletin. |
+| `meteo_sommet` | Météo à l'altitude d'un sommet : conditions actuelles, ou prévision de la journée pour aujourd'hui, demain, après-demain et dans trois jours (température, vent, rafales, nuages, isotherme 0 °C, neige). Source : Open-Meteo. |
 | `bulletin_avalanche` | Bulletin d'estimation du risque d'avalanche d'un massif : risque maximal et par altitude, orientations de pentes dangereuses, tendance à J+2, stabilité du manteau, enneigement, neige fraîche, aperçu météo. Source : Météo-France. |
-| `resume_sortie` | En un seul appel, la prévision météo d’un sommet et le bulletin d’avalanche de son massif.                                                                                                                                           |
 
 Exemples de questions à poser à Claude :
 
@@ -33,14 +34,14 @@ Couverture : les sommets définis dans `src/sommets.ts` (dont Chamechaude et le 
 
 ## Prérequis
 
-- Node.js 22 ou plus récent (testé avec Node 22)
+- Node.js 22 ou plus récent (testé avec Node 22), ou Docker
 - [Claude Desktop](https://claude.ai/download) (les serveurs MCP locaux se déclarent dans son fichier de configuration)
 - Un compte gratuit sur le [portail des API de Météo-France](https://portail-api.meteofrance.fr), avec une clé d'API pour le bulletin d'avalanche (voir ci-dessous)
 
 ## Installation
 
 ```bash
-git clone https://github.com/TON-PSEUDO/mcp-montagne.git
+git clone https://github.com/H-Oui/mcp-montagne.git
 cd mcp-montagne
 npm install
 npm run build
@@ -80,12 +81,30 @@ Quittez ensuite **complètement** Claude Desktop (y compris son icône dans la z
 
 ## Lancer avec Docker
 
+Une image est publiée automatiquement à chaque version sur GitHub Container Registry :
+
 ```bash
-docker build -t mcp-montagne .
-docker run -i --rm --env-file .env mcp-montagne
+docker pull ghcr.io/h-oui/mcp-montagne:latest
 ```
 
-La clé d'API est transmise au démarrage via `--env-file` et n'est jamais copiée dans l'image (le fichier `.env` est exclu par `.dockerignore`).
+Pour l'utiliser dans Claude Desktop, avec la clé d'API dans un fichier `.env` :
+
+```json
+{
+  "mcpServers": {
+    "montagne": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "--env-file", "C:\\chemin\\vers\\.env",
+        "ghcr.io/h-oui/mcp-montagne:latest"
+      ]
+    }
+  }
+}
+```
+
+Pour construire l'image soi-même : `docker build -t mcp-montagne .`
 
 ## Développement
 
@@ -101,6 +120,18 @@ Pour tester les outils sans passer par Claude, l'[MCP Inspector](https://github.
 npx @modelcontextprotocol/inspector node dist/index.js
 ```
 
+### Intégration et déploiement continus
+
+- **CI** (`.github/workflows/ci.yml`) : à chaque push et pull request, installation, compilation et tests sur Node 22.
+- **CD** (`.github/workflows/cd.yml`) : à chaque étiquette de version (`v*`), les tests sont relancés puis l'image Docker est construite et publiée sur `ghcr.io`. Si un test échoue, rien n'est publié.
+
+Pour publier une nouvelle version :
+
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
+
 ### Structure
 
 ```
@@ -112,17 +143,22 @@ src/
   bra.ts          appel à l'API Météo-France, détection du hors-saison
   bra-parser.ts   lecture du XML du bulletin
   bra-format.ts   mise en forme du bulletin pour Claude
+  synthese.ts     synthèse d'une sortie (météo + bulletin)
 tests/
   fixtures/       bulletin d'archive réel (Belledonne) utilisé par les tests
+Dockerfile        image multi-étapes (compilation, puis image finale allégée)
+.github/workflows CI et CD
 ```
 
 ### Choix techniques
 
 - **Données séparées de la logique** : ajouter un sommet, c'est ajouter une entrée dans `src/sommets.ts`, sans toucher au code.
-- **Le hors-saison est une réponse normale, pas une erreur** : de l'été au début novembre, l'API renvoie un message à la place du bulletin. L'outil l'indique clairement à l'utilisateur.
+- **Le hors-saison est une réponse normale, pas une erreur** : de l'été au début novembre, l'API renvoie un message à la place du bulletin. L'outil l'indique clairement, en précisant que l'absence de bulletin ne signifie pas l'absence de risque.
+- **Échecs partiels** : la synthèse interroge la météo et le bulletin en parallèle (`Promise.allSettled`). Si l'une des sources échoue, l'autre est quand même restituée, et le message le précise.
 - **Erreurs explicites** : sommet ou massif inconnu (avec la liste des valeurs valides), clé manquante, API indisponible. L'outil renvoie un message exploitable plutôt que de planter.
 - **Tests sans réseau** : l'analyse du bulletin est testée sur un vrai bulletin d'archive, et les appels à l'API sont simulés, donc les tests ne dépendent ni d'Internet ni d'une clé d'API.
 - **Rappel de sécurité systématique** dans chaque bulletin restitué, avec la source.
+- **Image Docker allégée** : build en deux étapes, dépendances de production uniquement, exécution sous un utilisateur non root.
 
 ## Limites connues
 
@@ -134,10 +170,11 @@ tests/
 
 ## Prochaines étapes
 
+- [x] Outil de synthèse combinant météo et bulletin pour un sommet donné
+- [x] Dockerfile et intégration continue (GitHub Actions)
+- [x] Publication automatique de l'image Docker à chaque version
 - [ ] Test en conditions réelles du flux de l'API à la reprise de la saison
 - [ ] Prévision de **mer de nuages** : lecture de l'altitude fournie dans le bulletin (`MERNUAGES`), puis estimation à partir des niveaux de pression d'Open-Meteo en dehors de la saison
-- [ ] Outil de synthèse combinant météo et bulletin pour un sommet donné
-- [ ] Dockerfile et intégration continue (GitHub Actions)
 - [ ] Publication sur npm
 - [ ] Plus de sommets, et mise en cache des réponses
 
